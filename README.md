@@ -2,7 +2,7 @@
 
 这个项目会定时检查中国人民大学教务系统成绩页，一旦发现新课程成绩或已有成绩变化，就通过 PushPlus 推送到手机。
 
-默认运行方式是 GitHub Actions，每 10 分钟执行一次。不需要自己的服务器，也不需要电脑常开。
+默认运行方式是 GitHub Actions，每 15 分钟执行一次。不需要自己的服务器，也不需要电脑常开。
 
 ## 需要准备
 
@@ -69,7 +69,7 @@ python check_grades.py
 | `PUSHPLUS_TOKEN` | PushPlus 个人 token |
 | `GRADE_HASH_SALT` | 任意随机字符串 |
 
-然后进入 `Actions -> grade-monitor -> Run workflow` 手动运行一次。之后 GitHub Actions 会按 `.github/workflows/grade-monitor.yml` 每 10 分钟执行。
+然后进入 `Actions -> grade-monitor -> Run workflow` 手动运行一次。之后 GitHub Actions 会按 `.github/workflows/grade-monitor.yml` 每 15 分钟执行。
 
 状态保存在 `seen_grades.json`，里面只有 hash 指纹，不保存课程名和分数明文。
 
