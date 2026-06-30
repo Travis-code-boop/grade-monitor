@@ -8,7 +8,7 @@
 
 ## 需要准备
 
-建一个私有 GitHub 仓库，然后在 `Settings -> Secrets and variables -> Actions` 里添加：
+建一个 GitHub 仓库，然后在 `Settings -> Secrets and variables -> Actions` 里添加：
 
 | Secret | 说明 |
 | --- | --- |
