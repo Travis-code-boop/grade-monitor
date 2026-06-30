@@ -73,12 +73,6 @@ def main() -> int:
             print(f"No grade changes. Visible grades: {len(grades)}.")
             if settings.notify_unchanged and not args.dry_run:
                 notifier.send("成绩提醒运行正常", render_plain(f"暂无新成绩，共 {len(grades)} 条。"))
-            if not args.dry_run:
-                save_state(
-                    settings.state_file,
-                    state.fingerprints | current_fingerprints,
-                    state.created_at,
-                )
             return 0
 
         print(f"Found {len(new_grades)} new or changed grades.")
