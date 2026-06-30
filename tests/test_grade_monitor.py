@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from check_grades import looks_like_pushplus_token, mask_secret, parse_cookie_header
+from check_grades import (
+    looks_like_pushplus_token,
+    mask_secret,
+    parse_cookie_header,
+    safe_failure_message,
+    safe_failure_title,
+)
 from config import Settings
 from grade_diff import fingerprint_set, find_new_grades, normalize_grade_rows
 from ruc_jw_client import (
@@ -114,6 +120,12 @@ class ConfigCheckTest(unittest.TestCase):
     def test_pushplus_token_shape(self) -> None:
         self.assertTrue(looks_like_pushplus_token("658716a2add245a7b3dc4346d83fb594"))
         self.assertFalse(looks_like_pushplus_token("TOKEN:658716a2add245a7b3dc4346d83fb594"))
+
+    def test_failure_notification_avoids_sensitive_words(self) -> None:
+        self.assertEqual(safe_failure_title("教务 TOKEN 已过期"), "教务登录失效")
+        message = safe_failure_message("教务登录态失效")
+        self.assertNotIn("TOKEN", message)
+        self.assertNotIn("COOKIE", message)
 
 
 if __name__ == "__main__":

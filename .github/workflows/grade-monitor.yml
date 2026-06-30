@@ -25,6 +25,15 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests
 
+      - name: Check redacted config
+        env:
+          RUC_TOKEN: ${{ secrets.RUC_TOKEN }}
+          RUC_COOKIE: ${{ secrets.RUC_COOKIE }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+          GRADE_HASH_SALT: ${{ secrets.GRADE_HASH_SALT }}
+          RUC_PAGE_SIZE: "100"
+        run: python check_grades.py --config-check
+
       - name: Run grade monitor
         env:
           RUC_TOKEN: ${{ secrets.RUC_TOKEN }}

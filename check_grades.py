@@ -124,10 +124,26 @@ def notify_failure(
     if not do_notify:
         return 1
     try:
-        notifier.send(title, render_plain(message))
+        notifier.send(safe_failure_title(title), render_plain(safe_failure_message(title)))
     except Exception as notify_exc:
         print(f"Failed to send failure notification: {notify_exc}", file=sys.stderr)
     return 1
+
+
+def safe_failure_title(title: str) -> str:
+    if "登录态" in title or "TOKEN" in title:
+        return "教务登录失效"
+    return title
+
+
+def safe_failure_message(title: str) -> str:
+    if "登录态" in title or "TOKEN" in title:
+        return "教务登录态失效，请重新登录教务系统，并更新同一次成绩请求里的教务凭据。"
+    if "接口" in title:
+        return "教务成绩接口返回异常，请查看 GitHub Actions 日志。"
+    if "网络" in title:
+        return "教务网络请求失败，请查看 GitHub Actions 日志。"
+    return "成绩监控运行失败，请查看 GitHub Actions 日志。"
 
 
 def print_config_check(settings) -> None:
