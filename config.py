@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from ruc_auth import DEFAULT_RUC_ASSERT_URL, DEFAULT_RUC_OAUTH_AUTHORIZE_URL
+
 
 DEFAULT_RUC_GRADES_URL = (
     "https://jw.ruc.edu.cn/resService/jwxtpt/v1/xsd/cjgl_xsxdsq/findKccjList"
@@ -57,8 +59,13 @@ class Settings:
     ruc_token: str
     pushplus_token: str
     grade_hash_salt: str
+    ruc_username: str = ""
+    ruc_password: str = ""
     ruc_cookie: str = ""
     ruc_grades_url: str = DEFAULT_RUC_GRADES_URL
+    ruc_assert_url: str = DEFAULT_RUC_ASSERT_URL
+    ruc_oauth_authorize_url: str = DEFAULT_RUC_OAUTH_AUTHORIZE_URL
+    ruc_login_school_code: str = "ruc"
     ruc_user_role_code: str = "student"
     ruc_user_agent: str = ""
     ruc_browser_user_agent: str = DEFAULT_BROWSER_USER_AGENT
@@ -78,8 +85,16 @@ def load_settings() -> Settings:
     load_dotenv()
     return Settings(
         ruc_token=os.getenv("RUC_TOKEN", "").strip(),
+        ruc_username=os.getenv("RUC_USERNAME", "").strip(),
+        ruc_password=os.getenv("RUC_PASSWORD", "").strip(),
         ruc_cookie=os.getenv("RUC_COOKIE", "").strip(),
         ruc_grades_url=os.getenv("RUC_GRADES_URL", DEFAULT_RUC_GRADES_URL).strip(),
+        ruc_assert_url=os.getenv("RUC_ASSERT_URL", DEFAULT_RUC_ASSERT_URL).strip(),
+        ruc_oauth_authorize_url=os.getenv(
+            "RUC_OAUTH_AUTHORIZE_URL",
+            DEFAULT_RUC_OAUTH_AUTHORIZE_URL,
+        ).strip(),
+        ruc_login_school_code=os.getenv("RUC_LOGIN_SCHOOL_CODE", "ruc").strip(),
         ruc_user_role_code=os.getenv("RUC_USER_ROLE_CODE", "student").strip(),
         ruc_user_agent=os.getenv("RUC_USER_AGENT", "").strip(),
         ruc_browser_user_agent=(

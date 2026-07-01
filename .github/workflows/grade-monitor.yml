@@ -27,6 +27,8 @@ jobs:
 
       - name: Check redacted config
         env:
+          RUC_USERNAME: ${{ secrets.RUC_USERNAME }}
+          RUC_PASSWORD: ${{ secrets.RUC_PASSWORD }}
           RUC_TOKEN: ${{ secrets.RUC_TOKEN }}
           RUC_COOKIE: ${{ secrets.RUC_COOKIE }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
@@ -36,6 +38,8 @@ jobs:
 
       - name: Run grade monitor
         env:
+          RUC_USERNAME: ${{ secrets.RUC_USERNAME }}
+          RUC_PASSWORD: ${{ secrets.RUC_PASSWORD }}
           RUC_TOKEN: ${{ secrets.RUC_TOKEN }}
           RUC_COOKIE: ${{ secrets.RUC_COOKIE }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}

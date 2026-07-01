@@ -3,12 +3,13 @@ from __future__ import annotations
 import base64
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 from urllib.parse import quote
 
 from config import Settings
 from http_json import HttpJsonError, post_json
+from ruc_auth import RucPasswordLoginError, login_with_password
 
 
 EMPTY_CONDITIONS = {"conditionGroup": [{"link": "and", "condition": []}]}
@@ -99,9 +100,10 @@ def parse_token(token: str) -> TokenInfo:
 class RucJwClient:
     def __init__(self, settings: Settings):
         self.settings = settings
+        self._password_login_done = False
 
     def fetch_undergraduate_grades(self) -> list[dict[str, Any]]:
-        self._ensure_token_usable()
+        self._ensure_authenticated()
         payload = {
             "pyfa007id": self.settings.ruc_plan_type,
             "jczy013id": self.settings.ruc_semesters or [],
@@ -155,7 +157,7 @@ class RucJwClient:
 
     def _ensure_token_usable(self) -> None:
         if not self.settings.ruc_token:
-            raise RucAuthError("RUC_TOKEN is not configured")
+            raise RucAuthError("RUC_USERNAME/RUC_PASSWORD or RUC_TOKEN is not configured")
         token_info = parse_token(self.settings.ruc_token)
         seconds = token_info.seconds_until_expiry
         if seconds is not None and seconds <= 0:
@@ -169,6 +171,21 @@ class RucJwClient:
 
     def token_info(self) -> TokenInfo:
         return parse_token(self.settings.ruc_token)
+
+    def _ensure_authenticated(self) -> None:
+        if self.settings.ruc_username and self.settings.ruc_password:
+            if not self._password_login_done:
+                try:
+                    session = login_with_password(self.settings)
+                except RucPasswordLoginError as exc:
+                    raise RucAuthError(str(exc)) from exc
+                self.settings = replace(
+                    self.settings,
+                    ruc_token=session.token,
+                    ruc_cookie=session.cookie_header or self.settings.ruc_cookie,
+                )
+                self._password_login_done = True
+        self._ensure_token_usable()
 
     def _unwrap_grade_rows(self, body: Any) -> list[dict[str, Any]]:
         if not isinstance(body, dict):

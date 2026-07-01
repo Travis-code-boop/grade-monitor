@@ -187,7 +187,7 @@ def safe_failure_title(title: str) -> str:
 
 def safe_failure_message(title: str) -> str:
     if "登录态" in title or "TOKEN" in title:
-        return "教务登录态失效，请重新登录教务系统，并更新同一次成绩请求里的教务凭据。"
+        return "教务登录失败，请检查账号密码配置，或确认统一身份认证没有要求验证码、二次验证。"
     if "接口" in title:
         return "教务成绩接口返回异常，请查看 GitHub Actions 日志。"
     if "网络" in title:
@@ -197,7 +197,7 @@ def safe_failure_message(title: str) -> str:
 
 def health_failure_message(exc: BaseException) -> str:
     if isinstance(exc, (RucTokenExpired, RucAuthError)):
-        return "教务登录态失效，请重新登录教务系统，并更新同一次成绩请求里的教务凭据。"
+        return "教务登录失败，请检查账号密码配置，或确认统一身份认证没有要求验证码、二次验证。"
     if isinstance(exc, RucResponseError):
         return "教务成绩接口返回异常，请查看 GitHub Actions 日志。"
     if isinstance(exc, RucJwError):
@@ -213,8 +213,12 @@ def print_config_check(settings) -> None:
     token_info = parse_token(settings.ruc_token)
     cookies = parse_cookie_header(settings.ruc_cookie)
     session = cookies.get("SESSION", "")
+    password_login_configured = bool(settings.ruc_username and settings.ruc_password)
 
     print("本地配置体检（已隐藏敏感值）")
+    print(f"- 登录方式: {'账号密码直登' if password_login_configured else '手动 TOKEN'}")
+    print(f"- RUC_USERNAME: {format_present(settings.ruc_username)}")
+    print(f"- RUC_PASSWORD: {format_present(settings.ruc_password, reveal=False)}")
     print(f"- RUC_TOKEN: {format_present(settings.ruc_token)}")
     if settings.ruc_token:
         print(f"  - JWT 片段数: {len(settings.ruc_token.split('.'))}")
@@ -251,10 +255,11 @@ def parse_cookie_header(cookie_header: str) -> dict[str, str]:
     return cookies
 
 
-def format_present(value: str) -> str:
+def format_present(value: str, reveal: bool = True) -> str:
     if not value:
         return "未配置"
-    return f"已配置，长度 {len(value)}，值 {mask_secret(value)}"
+    masked = mask_secret(value) if reveal else "*" * min(len(value), 8)
+    return f"已配置，长度 {len(value)}，值 {masked}"
 
 
 def mask_secret(value: str) -> str:

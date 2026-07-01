@@ -20,6 +20,13 @@ from ruc_jw_client import (
     cookie_value,
     qz_conditions,
 )
+from ruc_auth import (
+    describe_login_error,
+    extract_csrf_token,
+    extract_login_iframe_url,
+    format_vruc_username,
+    raw_query_value,
+)
 
 
 class QzEncodingTest(unittest.TestCase):
@@ -109,6 +116,35 @@ class RucResponseParsingTest(unittest.TestCase):
             client._ensure_token_usable()
 
 
+class RucPasswordLoginTest(unittest.TestCase):
+    def test_formats_vruc_username_for_student_account(self) -> None:
+        self.assertEqual(format_vruc_username("20240001"), "ruc:20240001")
+        self.assertEqual(format_vruc_username("ruc:20240001"), "ruc:20240001")
+        self.assertEqual(format_vruc_username("name@example.com"), "name@example.com")
+        self.assertEqual(format_vruc_username("13800138000"), "%2B86 13800138000")
+
+    def test_extracts_login_iframe_and_csrf_token(self) -> None:
+        html = (
+            '<iframe id="login-iframe" src="/auth/login?proxy=true&redirect_uri=a%2Fb">'
+            "</iframe>"
+            '<input type="hidden" name="csrftoken" value="abc123" id="csrftoken" />'
+        )
+        self.assertEqual(
+            extract_login_iframe_url(html, "https://v.ruc.edu.cn/account/login"),
+            "https://v.ruc.edu.cn/auth/login?proxy=true&redirect_uri=a%2Fb",
+        )
+        self.assertEqual(extract_csrf_token(html), "abc123")
+
+    def test_raw_query_value_preserves_encoded_redirect_uri(self) -> None:
+        url = "https://v.ruc.edu.cn/auth/login?proxy=true&redirect_uri=a%3Fb%3D1%26c%3D2"
+        self.assertEqual(raw_query_value(url, "redirect_uri"), "a%3Fb%3D1%26c%3D2")
+
+    def test_login_errors_are_actionable(self) -> None:
+        self.assertIn("账号或密码", describe_login_error("verification failed"))
+        self.assertIn("图片验证码", describe_login_error("captcha error"))
+        self.assertIn("二次验证码", describe_login_error("need twofactor"))
+
+
 class ConfigCheckTest(unittest.TestCase):
     def test_parse_cookie_header(self) -> None:
         self.assertEqual(
@@ -130,7 +166,7 @@ class ConfigCheckTest(unittest.TestCase):
         self.assertNotIn("COOKIE", message)
 
     def test_health_failure_message_classifies_auth_and_tests(self) -> None:
-        self.assertIn("教务登录态失效", health_failure_message(RucAuthError("401")))
+        self.assertIn("教务登录失败", health_failure_message(RucAuthError("401")))
         self.assertIn("代码自检未通过", health_failure_message(HealthCheckError("代码自检未通过")))
 
 
