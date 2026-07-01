@@ -12,28 +12,31 @@
 
 | Secret | 说明 |
 | --- | --- |
-| `RUC_TOKEN` | 登录教务系统后请求头里的 `TOKEN` |
+| `RUC_USERNAME` | 人大统一身份认证账号，通常是学号或工号 |
+| `RUC_PASSWORD` | 人大统一身份认证密码 |
 | `PUSHPLUS_TOKEN` | PushPlus token |
 | `GRADE_HASH_SALT` | 任意随机字符串，用来保护状态文件里的成绩指纹 |
-| `RUC_COOKIE` | 可选。若接口只带 `TOKEN` 不稳定，再填浏览器请求里的 Cookie |
+| `RUC_TOKEN` | 可选旧方案。账号密码直登不可用时，可填浏览器请求头里的 `TOKEN` |
+| `RUC_COOKIE` | 可选旧方案。与 `RUC_TOKEN` 来自同一次成绩请求 |
 
-`PUSHPLUS_TOKEN` 和 `RUC_TOKEN` 不要写进代码。
+`RUC_PASSWORD`、`PUSHPLUS_TOKEN`、`RUC_TOKEN` 和 `RUC_COOKIE` 不要写进代码。
 
-## 获取 RUC_TOKEN
+## 登录方式
+
+默认使用 `RUC_USERNAME` 和 `RUC_PASSWORD` 登录人大统一身份认证，成功后自动换取教务 `TOKEN` 和 Cookie，再查询成绩。
+
+如果账号是普通学号/工号，脚本会按统一认证网页的规则自动加上 `ruc:` 前缀。邮箱、手机号、已经带 `:` 前缀的账号会原样使用。少数情况下如果学校代码不是 `ruc`，可以添加变量 `RUC_LOGIN_SCHOOL_CODE`。
+
+如果统一身份认证临时要求图片验证码或二次验证码，GitHub Actions 无法自动完成登录，脚本会通过 PushPlus 发送失败提醒。此时可以稍后重试，或临时使用旧的 `RUC_TOKEN` / `RUC_COOKIE` 方案。
+
+旧方案获取方式：
 
 1. 浏览器登录 `https://jw.ruc.edu.cn/Njw2017/index.html#/student/course-score-search/`。
 2. 打开开发者工具，进入 Network。
 3. 刷新或重新点开成绩查询。
 4. 找到 `findKccjList` 请求。
-5. 复制请求头里的 `TOKEN` 值，放入 GitHub Secret `RUC_TOKEN`。
-
-也可以在 Console 尝试：
-
-```js
-localStorage.getItem("qzdatasoft")
-```
-
-如果 GitHub Actions 运行时报登录态失效，再把同一个请求里的 Cookie 放到 `RUC_COOKIE`。
+5. 复制请求头里的 `TOKEN` 值到 GitHub Secret `RUC_TOKEN`。
+6. 如接口只带 `TOKEN` 不稳定，再把同一次请求里的 Cookie 填入 `RUC_COOKIE`。
 
 ## 本地测试
 
@@ -46,13 +49,13 @@ cp .env.example .env
 填入 `.env` 后运行：
 
 ```bash
-python check_grades.py --config-check
-python check_grades.py --dry-run
-python check_grades.py --notify-test
-python check_grades.py
+python3 check_grades.py --config-check
+python3 check_grades.py --dry-run
+python3 check_grades.py --notify-test
+python3 check_grades.py
 ```
 
-`--config-check` 只输出脱敏后的配置摘要，可用来确认 `RUC_TOKEN`、`RUC_COOKIE`、`PUSHPLUS_TOKEN` 是否真的被脚本读到。
+`--config-check` 只输出脱敏后的配置摘要，可用来确认 `RUC_USERNAME`、`RUC_PASSWORD`、`PUSHPLUS_TOKEN` 等配置是否真的被脚本读到。
 
 第一次正常运行只会创建基线状态，不会推送历史成绩。之后发现新增或变化才会推送。
 
@@ -66,10 +69,12 @@ python check_grades.py
 
 | Secret | 说明 |
 | --- | --- |
-| `RUC_TOKEN` | 最新 `findKccjList` 请求头里的 `TOKEN` 值 |
-| `RUC_COOKIE` | 同一次 `findKccjList` 请求里 `-b '...'` 单引号内的完整 Cookie |
+| `RUC_USERNAME` | 人大统一身份认证账号 |
+| `RUC_PASSWORD` | 人大统一身份认证密码 |
 | `PUSHPLUS_TOKEN` | PushPlus 个人 token |
 | `GRADE_HASH_SALT` | 任意随机字符串 |
+| `RUC_TOKEN` | 可选旧方案 |
+| `RUC_COOKIE` | 可选旧方案 |
 
 然后进入 `Actions -> grade-monitor -> Run workflow` 手动运行一次。之后 GitHub Actions 会按 `.github/workflows/grade-monitor.yml` 每 15 分钟执行。
 
@@ -77,14 +82,14 @@ python check_grades.py
 
 状态保存在 `seen_grades.json`，里面只有 hash 指纹，不保存课程名和分数明文。
 
-## 更新登录态
+## 更新登录信息
 
-教务 `TOKEN` 过期后，脚本会通过 PushPlus 提醒。重新登录教务系统，找到最新的 `findKccjList` 请求，同时更新 GitHub Secrets 里的 `RUC_TOKEN` 和 `RUC_COOKIE`。
+账号密码方案下，平时不需要手动更新教务 `TOKEN`。如果统一身份认证密码变更，只需要更新 GitHub Secret `RUC_PASSWORD`。
 
-`RUC_TOKEN` 和 `RUC_COOKIE` 必须来自同一次请求。脚本会检查 `TOKEN` 里的 `sid` 和 Cookie 里的 `SESSION`，如果二者不一致，会提前报错，避免新旧登录态混用。
+如果使用旧方案，教务 `TOKEN` 过期后脚本会通过 PushPlus 提醒。重新登录教务系统，找到最新的 `findKccjList` 请求，同时更新 GitHub Secrets 里的 `RUC_TOKEN` 和 `RUC_COOKIE`。二者必须来自同一次请求，脚本会检查 `TOKEN` 里的 `sid` 和 Cookie 里的 `SESSION`，避免新旧登录态混用。
 
 ## 运行测试
 
 ```bash
-python -m unittest discover -s tests
+python3 -m unittest discover -s tests
 ```
